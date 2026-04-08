@@ -3,54 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso HUB Júpiter - Google Wallet</title>
+    <title>Acceso HUB Júpiter - TAS Seguridad</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background-color: #f4f7f6; color: #333; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { color: #1a73e8; margin-bottom: 10px; }
-        p { font-size: 0.9em; color: #666; margin-bottom: 25px; }
-        .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        .btn-camera { background: #4285f4; color: white; }
-        .btn-file { background: #34a853; color: white; }
-        .btn:active { transform: scale(0.98); }
-        #video-container { display: none; margin-top: 20px; position: relative; }
-        #video { width: 100%; border-radius: 10px; border: 2px solid #4285f4; }
-        #resultado-box { margin-top: 25px; padding: 20px; border: 2px dashed #4285f4; border-radius: 10px; display: none; background: #e8f0fe; }
-        #loading { display: none; margin-top: 10px; font-style: italic; color: #4285f4; }
+        /* IDENTIDAD TAS SEGURIDAD */
+        :root {
+            --tas-rojo: #e32b21;
+            --tas-negro: #1a1a1a;
+            --tas-gris-fondo: #f8f9fa;
+            --tas-gris-oscuro: #333333;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif; 
+            margin: 0; 
+            background-color: var(--tas-gris-fondo); 
+            color: var(--tas-negro); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh;
+        }
+        
+        .card { 
+            max-width: 420px; 
+            width: 90%; 
+            background: #ffffff; 
+            padding: 40px 30px; 
+            border-radius: 2px; /* Estilo más cuadrado e industrial */
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+            border-top: 6px solid var(--tas-rojo);
+            text-align: center;
+        }
+        
+        .logo { 
+            max-width: 140px; 
+            margin-bottom: 20px; 
+        }
+        
+        h2 { 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            font-size: 20px; 
+            margin-bottom: 10px;
+            color: var(--tas-negro);
+        }
+
+        .subtitle { 
+            font-size: 0.9em; 
+            color: var(--tas-gris-oscuro); 
+            margin-bottom: 30px; 
+            line-height: 1.5;
+        }
+        
+        .btn-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+        }
+        
+        .btn { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+            padding: 16px; 
+            border: none; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            font-size: 15px; 
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+        
+        .btn-camera { 
+            background-color: var(--tas-rojo); 
+            color: white; 
+        }
+        
+        .btn-camera:hover { background-color: #c4221a; }
+        
+        .btn-file { 
+            background-color: var(--tas-negro); 
+            color: white; 
+        }
+        
+        .btn-file:hover { background-color: #000000; }
+
+        #video-container { 
+            display: none; 
+            margin-top: 20px; 
+            border: 2px solid var(--tas-rojo);
+            background: #000;
+            line-height: 0;
+        }
+        
+        #video { width: 100%; transform: scaleX(-1); }
+        
+        #resultado-box { 
+            margin-top: 25px; 
+            padding: 20px; 
+            background: #fffafa; 
+            border: 1px solid #ff000021; 
+            display: none; 
+        }
+
+        #loading { color: var(--tas-rojo); font-weight: bold; margin: 10px 0; }
+        
+        /* BOTÓN WALLET ESTILO CHILERO */
+        #boton-wallet-container { 
+            margin-top: 15px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        
+        .wallet-img { 
+            height: 52px; 
+            transition: transform 0.2s; 
+        }
+        
+        .wallet-img:hover { transform: scale(1.05); }
+
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Acceso HUB Júpiter</h2>
-    <p>Agrega tu pase de parqueo a Google Wallet escaneando tu QR o subiendo el archivo.</p>
+<div class="card">
+    <img src="logo_tas.png" alt="TAS" class="logo" onerror="this.style.display='none'">
+    
+    <h2>HUB Júpiter</h2>
+    <p class="subtitle">Escanea tu código de acceso para guardarlo en tu dispositivo.</p>
 
-    <button class="btn btn-camera" onclick="abrirCamara()">📸 Usar Cámara</button>
-
-    <label class="btn btn-file">
-        📂 Subir Foto o PDF
-        <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
-    </label>
+    <div class="btn-group">
+        <button class="btn btn-camera" onclick="abrirCamara()">📸 Activar Cámara</button>
+        <label class="btn btn-file">
+            📂 Cargar Imagen / PDF
+            <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
+        </label>
+    </div>
 
     <div id="video-container">
         <video id="video"></video>
-        <p style="color: #4285f4;">Apunta al código QR...</p>
     </div>
 
     <div id="resultado-box">
-        <div id="status-text"><strong>¡QR Detectado!</strong></div>
-        <div id="loading">Generando enlace seguro...</div>
-        <div id="boton-wallet-container" style="margin-top: 15px;"></div>
+        <div id="status-text" style="color: var(--tas-rojo); font-weight: bold;">CÓDIGO DETECTADO</div>
+        <div id="loading">Generando pase oficial...</div>
+        <div id="boton-wallet-container"></div>
     </div>
 </div>
 
 <canvas id="hidden-canvas"></canvas>
 
 <script>
-    // Configuración PDF.js
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
     const fileInput = document.getElementById('file-input');
@@ -60,17 +168,12 @@
     const video = document.getElementById('video');
     const videoContainer = document.getElementById('video-container');
 
-    // --- LÓGICA DE ARCHIVOS ---
     fileInput.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
         limpiarEstado();
-        if (file.type === "application/pdf") {
-            await leerPDF(file);
-        } else {
-            leerImagen(file);
-        }
+        if (file.type === "application/pdf") await leerPDF(file);
+        else leerImagen(file);
     };
 
     async function leerPDF(file) {
@@ -80,30 +183,26 @@
         const viewport = page.getViewport({scale: 2});
         const canvas = document.getElementById('hidden-canvas');
         const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+        canvas.height = viewport.height; canvas.width = viewport.width;
         await page.render({canvasContext: context, viewport: viewport}).promise;
         detectarQR(canvas);
     }
 
     function leerImagen(file) {
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.getElementById('hidden-canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
+                canvas.width = img.width; canvas.height = img.height;
+                canvas.getContext('2d').drawImage(img, 0, 0);
                 detectarQR(canvas);
             };
-            img.src = event.target.result;
+            img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     }
 
-    // --- LÓGICA DE CÁMARA ---
     async function abrirCamara() {
         limpiarEstado();
         try {
@@ -113,23 +212,19 @@
             video.play();
             videoContainer.style.display = 'block';
             requestAnimationFrame(tickCamara);
-        } catch (err) {
-            alert("Error al acceder a la cámara. Asegúrate de dar permisos HTTPS.");
-        }
+        } catch (err) { alert("Error de cámara. Usa HTTPS."); }
     }
 
     function tickCamara() {
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
             const canvas = document.getElementById('hidden-canvas');
             const ctx = canvas.getContext('2d');
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight; canvas.width = video.videoWidth;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, imageData.width, imageData.height);
-            
             if (code) {
-                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject.getTracks().forEach(t => t.stop());
                 videoContainer.style.display = 'none';
                 detectarQR(canvas);
                 return;
@@ -138,7 +233,6 @@
         requestAnimationFrame(tickCamara);
     }
 
-    // --- PROCESAMIENTO FINAL ---
     function detectarQR(canvas) {
         const ctx = canvas.getContext('2d');
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -148,7 +242,6 @@
             resultadoBox.style.display = 'block';
             loading.style.display = 'block';
             
-            // Llamada al Worker de Cloudflare
             fetch('https://park-wallet.ingealexeg.workers.dev/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -159,25 +252,22 @@
                 loading.style.display = 'none';
                 botonContainer.innerHTML = `
                     <a href="${data.url}" target="_blank">
-                        <img src="https://storage.googleapis.com/wallet-external-assets-cloud-console/en-US/add-to-google-wallet.svg" alt="Añadir a Google Wallet" width="200">
+                        <img src="https://storage.googleapis.com/wallet-external-assets-cloud-console/en-US/add-to-google-wallet.svg" 
+                             class="wallet-img" alt="Add to Wallet">
                     </a>
                 `;
             })
-            .catch(err => {
-                loading.innerText = "Error al generar el pase. Revisa tu Worker.";
-                console.error(err);
-            });
+            .catch(() => { loading.innerText = "Error de conexión con el Worker."; });
         } else {
-            alert("No se pudo leer el QR. Intenta con una imagen más clara.");
+            alert("No se detectó código QR.");
         }
     }
 
     function limpiarEstado() {
         resultadoBox.style.display = 'none';
         botonContainer.innerHTML = '';
-        loading.innerText = 'Generando enlace seguro...';
+        loading.innerText = 'Generando pase oficial...';
     }
 </script>
-
 </body>
 </html>
