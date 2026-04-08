@@ -22,7 +22,6 @@
             align-items: center;
         }
 
-        /* CABECERA NEGRA */
         .header-tas {
             background-color: var(--tas-negro-header);
             padding: 15px 0;
@@ -37,17 +36,16 @@
             margin: 0 auto;
         }
 
-        /* TARJETA PEGADA ARRIBA */
         .card { 
             max-width: 400px; 
             width: 90%; 
             background: #fff; 
             padding: 25px; 
-            border-radius: 0 0 8px 8px; /* Redondeado solo abajo */
+            border-radius: 0 0 8px 8px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
             border-top: 5px solid var(--tas-rojo);
             text-align: center;
-            margin-top: 0; /* Pegado total a la franja */
+            margin-top: 0; 
         }
         
         h2 { 
@@ -71,10 +69,22 @@
             cursor: pointer; 
             font-size: 13px; 
             text-transform: uppercase;
+            color: white;
+            text-decoration: none;
         }
         
-        .btn-camera { background-color: var(--tas-rojo); color: white; }
-        .btn-file { background-color: #222; color: white; }
+        .btn-camera { background-color: var(--tas-rojo); }
+        .btn-file { background-color: #222; }
+
+        #video-container { 
+            display: none; 
+            margin-top: 15px; 
+            border: 2px solid var(--tas-rojo);
+            border-radius: 8px;
+            overflow: hidden;
+            line-height: 0;
+        }
+        #video { width: 100%; }
 
         #resultado-box { 
             margin-top: 20px; 
@@ -84,18 +94,8 @@
             border-radius: 8px;
         }
 
-        /* ESTILO DEL BOTÓN WALLET */
-        .wallet-link {
-            display: inline-block;
-            margin-top: 10px;
-            text-decoration: none;
-        }
-
-        .wallet-img {
-            height: 55px; /* Tamaño ideal según lineamientos de Google */
-            width: auto;
-            display: block;
-        }
+        .wallet-link { display: inline-block; margin-top: 10px; }
+        .wallet-img { height: 55px; width: auto; display: block; }
 
         canvas { display: none; }
     </style>
@@ -119,6 +119,10 @@
             </label>
         </div>
 
+        <div id="video-container">
+            <video id="video"></video>
+        </div>
+
         <div id="resultado-box">
             <p style="color: #666; font-size: 13px; margin-bottom: 10px;">¡QR Detectado!</p>
             <div id="boton-wallet-container"></div>
@@ -128,51 +132,116 @@
     <canvas id="hidden-canvas"></canvas>
 
 <script>
-    const botonContainer = document.getElementById('boton-wallet-container');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    const fileInput = document.getElementById('file-input');
     const resultadoBox = document.getElementById('resultado-box');
+    const botonContainer = document.getElementById('boton-wallet-container');
+    const video = document.getElementById('video');
+    const videoContainer = document.getElementById('video-container');
 
-    // ESTO ES LO QUE SOLUCIONA EL BOTÓN
-    function mostrarBotonWallet(urlPase) {
-        resultadoBox.style.display = 'block';
-        
-        // Creamos el enlace y la imagen dinámicamente
-        botonContainer.innerHTML = `
-            <a href="${urlPase}" target="_blank" class="wallet-link">
-                <img src="google-wallet.png" 
-                     class="wallet-img" 
-                     alt="Add to Google Wallet"
-                     onerror="sustituirPorBotonGoogle(this)">
-            </a>
-        `;
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        limpiarEstado();
+        if (file.type === "application/pdf") await leerPDF(file);
+        else leerImagen(file);
+    };
+
+    async function leerPDF(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({scale: 2});
+        const canvas = document.getElementById('hidden-canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height; canvas.width = viewport.width;
+        await page.render({canvasContext: context, viewport: viewport}).promise;
+        detectarQR(canvas);
     }
 
-    // Si tu imagen "boton-wallet.png" falla, este código dibuja el botón oficial automáticamente
-    function sustituirPorBotonGoogle(imgElement) {
-        imgElement.onerror = null; // Evita bucles
-        imgElement.src = "https://upload.wikimedia.org/wikipedia/commons/b/b2/Add_to_Google_Wallet_badge.svg";
+    function leerImagen(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.getElementById('hidden-canvas');
+                canvas.width = img.width; canvas.height = img.height;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                detectarQR(canvas);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     }
 
-    // --- LÓGICA DE DETECCIÓN (SIMPLIFICADA PARA EL EJEMPLO) ---
+    async function abrirCamara() {
+        limpiarEstado();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+            video.setAttribute("playsinline", true);
+            video.play();
+            videoContainer.style.display = 'block';
+            requestAnimationFrame(tickCamara);
+        } catch (err) {
+            alert("Error de cámara. Usa HTTPS.");
+        }
+    }
+
+    function tickCamara() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            const canvas = document.getElementById('hidden-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.height = video.videoHeight; canvas.width = video.videoWidth;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            if (code) {
+                video.srcObject.getTracks().forEach(t => t.stop());
+                videoContainer.style.display = 'none';
+                detectarQR(canvas);
+                return;
+            }
+        }
+        requestAnimationFrame(tickCamara);
+    }
+
     function detectarQR(canvas) {
         const ctx = canvas.getContext('2d');
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height);
         
         if (code) {
+            resultadoBox.style.display = 'block';
             botonContainer.innerHTML = "Generando enlace...";
+            
             fetch('https://park-wallet.ingealexeg.workers.dev/', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ qr_data: code.data })
             })
             .then(res => res.json())
             .then(data => {
-                mostrarBotonWallet(data.url);
+                // AQUÍ USAMOS EL NOMBRE CORRECTO: google-wallet.png
+                botonContainer.innerHTML = `
+                    <a href="${data.url}" target="_blank" class="wallet-link">
+                        <img src="google-wallet.png" 
+                             class="wallet-img" 
+                             alt="Add to Google Wallet"
+                             onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/b/b2/Add_to_Google_Wallet_badge.svg'">
+                    </a>`;
             })
-            .catch(() => { botonContainer.innerHTML = "Error de conexión"; });
+            .catch(() => { botonContainer.innerHTML = "Error al conectar"; });
         }
     }
-    
-    // (Resto de funciones: abrirCamara, leerPDF, etc. se mantienen igual que tu versión funcional)
+
+    function limpiarEstado() {
+        resultadoBox.style.display = 'none';
+        botonContainer.innerHTML = '';
+        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+        videoContainer.style.display = 'none';
+    }
 </script>
 </body>
 </html>
