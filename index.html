@@ -100,11 +100,47 @@
             }
         }
 
-        // Lógica para CÁMARA (Resumida para el ejemplo)
-        function abrirCamara() {
-            alert("Aquí activaríamos la cámara usando getUserMedia (necesita HTTPS)");
-            // En una web real, aquí iniciamos el loop de la cámara
+
+        // Lógica para CÁMARA (Activada de verdad)
+async function abrirCamara() {
+    const videoContainer = document.getElementById('video-container');
+    const video = document.getElementById('video');
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true); // Requerido para iOS
+        video.play();
+        videoContainer.style.display = 'block';
+        requestAnimationFrame(tickCamara);
+    } catch (err) {
+        alert("Error al acceder a la cámara. Revisa los permisos.");
+        console.error(err);
+    }
+}
+
+function tickCamara() {
+    const video = document.getElementById('video');
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        const canvas = document.getElementById('hidden-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        
+        if (code) {
+            // QR detectado en tiempo real
+            video.srcObject.getTracks().forEach(track => track.stop()); // Detener la cámara
+            videoContainer.style.display = 'none';
+            detectarQR(canvas); // Procesar el QR igual que si fuera un archivo
+            return; 
         }
+    }
+    requestAnimationFrame(tickCamara);
+}
     </script>
 </body>
 </html>
