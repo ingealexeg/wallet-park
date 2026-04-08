@@ -3,144 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso HUB Júpiter</title>
+    <title>Acceso HUB Júpiter - Google Wallet</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #1a73e8; margin-bottom: 10px; }
+        p { font-size: 0.9em; color: #666; margin-bottom: 25px; }
+        .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        .btn-camera { background: #4285f4; color: white; }
+        .btn-file { background: #34a853; color: white; }
+        .btn:active { transform: scale(0.98); }
+        #video-container { display: none; margin-top: 20px; position: relative; }
+        #video { width: 100%; border-radius: 10px; border: 2px solid #4285f4; }
+        #resultado-box { margin-top: 25px; padding: 20px; border: 2px dashed #4285f4; border-radius: 10px; display: none; background: #e8f0fe; }
+        #loading { display: none; margin-top: 10px; font-style: italic; color: #4285f4; }
+        canvas { display: none; }
+    </style>
 </head>
-<body style="font-family: sans-serif; text-align: center; padding: 20px;">
+<body>
 
-    <h2>Pase a Google Wallet</h2>
-    <p>Elige cómo cargar tu QR de Júpiter:</p>
+<div class="container">
+    <h2>Acceso HUB Júpiter</h2>
+    <p>Agrega tu pase de parqueo a Google Wallet escaneando tu QR o subiendo el archivo.</p>
 
-    <button onclick="abrirCamara()" style="padding: 15px; margin: 10px; background: #4285f4; color: white; border: none; border-radius: 8px;">
-        📸 Usar Cámara (Papel/Otro cel)
-    </button>
+    <button class="btn btn-camera" onclick="abrirCamara()">📸 Usar Cámara</button>
 
-    <br>
-
-    <label style="padding: 15px; margin: 10px; display: inline-block; background: #34a853; color: white; border-radius: 8px; cursor: pointer;">
+    <label class="btn btn-file">
         📂 Subir Foto o PDF
         <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
     </label>
 
-    <div id="video-container" style="display:none; margin-top: 20px;">
-        <video id="video" width="300" height="300" style="border: 1px solid black;"></video>
+    <div id="video-container">
+        <video id="video"></video>
+        <p style="color: #4285f4;">Apunta al código QR...</p>
     </div>
 
-    <canvas id="hidden-canvas" style="display:none;"></canvas>
-    
-    <div id="resultado-box" style="margin-top: 20px; padding: 15px; border: 1px solid #ccc; display: none;">
-        <p><strong>QR Detectado con éxito</strong></p>
-        <div id="boton-wallet-container">
-            <button disabled>Generando enlace...</button>
-        </div>
+    <div id="resultado-box">
+        <div id="status-text"><strong>¡QR Detectado!</strong></div>
+        <div id="loading">Generando enlace seguro...</div>
+        <div id="boton-wallet-container" style="margin-top: 15px;"></div>
     </div>
+</div>
 
-    <script>
-        // Configuración de PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+<canvas id="hidden-canvas"></canvas>
 
-        const fileInput = document.getElementById('file-input');
-        const resultadoBox = document.getElementById('resultado-box');
+<script>
+    // Configuración PDF.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // Lógica para ARCHIVOS (Imagen o PDF)
-        fileInput.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+    const fileInput = document.getElementById('file-input');
+    const resultadoBox = document.getElementById('resultado-box');
+    const loading = document.getElementById('loading');
+    const botonContainer = document.getElementById('boton-wallet-container');
+    const video = document.getElementById('video');
+    const videoContainer = document.getElementById('video-container');
 
-            if (file.type === "application/pdf") {
-                leerPDF(file);
-            } else {
-                leerImagen(file);
-            }
-        };
-
-        async function leerPDF(file) {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-            const page = await pdf.getPage(1); // Leemos la primera página
-            const viewport = page.getViewport({scale: 2});
-            const canvas = document.getElementById('hidden-canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            await page.render({canvasContext: context, viewport: viewport}).promise;
-            detectarQR(canvas);
+    // --- LÓGICA DE ARCHIVOS ---
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        limpiarEstado();
+        if (file.type === "application/pdf") {
+            await leerPDF(file);
+        } else {
+            leerImagen(file);
         }
+    };
 
-        function leerImagen(file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.getElementById('hidden-canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    detectarQR(canvas);
-                };
-                img.src = event.target.result;
+    async function leerPDF(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({scale: 2});
+        const canvas = document.getElementById('hidden-canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({canvasContext: context, viewport: viewport}).promise;
+        detectarQR(canvas);
+    }
+
+    function leerImagen(file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.getElementById('hidden-canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                detectarQR(canvas);
             };
-            reader.readAsDataURL(file);
-        }
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
 
-        function detectarQR(canvas) {
+    // --- LÓGICA DE CÁMARA ---
+    async function abrirCamara() {
+        limpiarEstado();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+            video.setAttribute("playsinline", true);
+            video.play();
+            videoContainer.style.display = 'block';
+            requestAnimationFrame(tickCamara);
+        } catch (err) {
+            alert("Error al acceder a la cámara. Asegúrate de dar permisos HTTPS.");
+        }
+    }
+
+    function tickCamara() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            const canvas = document.getElementById('hidden-canvas');
             const ctx = canvas.getContext('2d');
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, imageData.width, imageData.height);
             
             if (code) {
-                console.log("Dato encontrado:", code.data);
-                resultadoBox.style.display = 'block';
-                // PASO SIGUIENTE: Enviar code.data al backend de Python
-            } else {
-                alert("No se detectó QR. Asegúrate que se vea claro.");
+                video.srcObject.getTracks().forEach(track => track.stop());
+                videoContainer.style.display = 'none';
+                detectarQR(canvas);
+                return;
             }
         }
-
-
-        // Lógica para CÁMARA (Activada de verdad)
-async function abrirCamara() {
-    const videoContainer = document.getElementById('video-container');
-    const video = document.getElementById('video');
-    
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        video.srcObject = stream;
-        video.setAttribute("playsinline", true); // Requerido para iOS
-        video.play();
-        videoContainer.style.display = 'block';
         requestAnimationFrame(tickCamara);
-    } catch (err) {
-        alert("Error al acceder a la cámara. Revisa los permisos.");
-        console.error(err);
     }
-}
 
-function tickCamara() {
-    const video = document.getElementById('video');
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        const canvas = document.getElementById('hidden-canvas');
+    // --- PROCESAMIENTO FINAL ---
+    function detectarQR(canvas) {
         const ctx = canvas.getContext('2d');
-        canvas.height = video.videoHeight;
-        canvas.width = video.videoWidth;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height);
         
         if (code) {
-            // QR detectado en tiempo real
-            video.srcObject.getTracks().forEach(track => track.stop()); // Detener la cámara
-            videoContainer.style.display = 'none';
-            detectarQR(canvas); // Procesar el QR igual que si fuera un archivo
-            return; 
+            resultadoBox.style.display = 'block';
+            loading.style.display = 'block';
+            
+            // Llamada al Worker de Cloudflare
+            fetch('https://park-wallet.ingealexeg.workers.dev/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qr_data: code.data })
+            })
+            .then(res => res.json())
+            .then(data => {
+                loading.style.display = 'none';
+                botonContainer.innerHTML = `
+                    <a href="${data.url}" target="_blank">
+                        <img src="https://storage.googleapis.com/wallet-external-assets-cloud-console/en-US/add-to-google-wallet.svg" alt="Añadir a Google Wallet" width="200">
+                    </a>
+                `;
+            })
+            .catch(err => {
+                loading.innerText = "Error al generar el pase. Revisa tu Worker.";
+                console.error(err);
+            });
+        } else {
+            alert("No se pudo leer el QR. Intenta con una imagen más clara.");
         }
     }
-    requestAnimationFrame(tickCamara);
-}
-    </script>
+
+    function limpiarEstado() {
+        resultadoBox.style.display = 'none';
+        botonContainer.innerHTML = '';
+        loading.innerText = 'Generando enlace seguro...';
+    }
+</script>
+
 </body>
 </html>
