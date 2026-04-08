@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso HUB Júpiter</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+</head>
+<body style="font-family: sans-serif; text-align: center; padding: 20px;">
+
+    <h2>Pase a Google Wallet</h2>
+    <p>Elige cómo cargar tu QR de Júpiter:</p>
+
+    <button onclick="abrirCamara()" style="padding: 15px; margin: 10px; background: #4285f4; color: white; border: none; border-radius: 8px;">
+        📸 Usar Cámara (Papel/Otro cel)
+    </button>
+
+    <br>
+
+    <label style="padding: 15px; margin: 10px; display: inline-block; background: #34a853; color: white; border-radius: 8px; cursor: pointer;">
+        📂 Subir Foto o PDF
+        <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
+    </label>
+
+    <div id="video-container" style="display:none; margin-top: 20px;">
+        <video id="video" width="300" height="300" style="border: 1px solid black;"></video>
+    </div>
+
+    <canvas id="hidden-canvas" style="display:none;"></canvas>
+    
+    <div id="resultado-box" style="margin-top: 20px; padding: 15px; border: 1px solid #ccc; display: none;">
+        <p><strong>QR Detectado con éxito</strong></p>
+        <div id="boton-wallet-container">
+            <button disabled>Generando enlace...</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        const fileInput = document.getElementById('file-input');
+        const resultadoBox = document.getElementById('resultado-box');
+
+        // Lógica para ARCHIVOS (Imagen o PDF)
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.type === "application/pdf") {
+                leerPDF(file);
+            } else {
+                leerImagen(file);
+            }
+        };
+
+        async function leerPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            const page = await pdf.getPage(1); // Leemos la primera página
+            const viewport = page.getViewport({scale: 2});
+            const canvas = document.getElementById('hidden-canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({canvasContext: context, viewport: viewport}).promise;
+            detectarQR(canvas);
+        }
+
+        function leerImagen(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.getElementById('hidden-canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    detectarQR(canvas);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function detectarQR(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                console.log("Dato encontrado:", code.data);
+                resultadoBox.style.display = 'block';
+                // PASO SIGUIENTE: Enviar code.data al backend de Python
+            } else {
+                alert("No se detectó QR. Asegúrate que se vea claro.");
+            }
+        }
+
+        // Lógica para CÁMARA (Resumida para el ejemplo)
+        function abrirCamara() {
+            alert("Aquí activaríamos la cámara usando getUserMedia (necesita HTTPS)");
+            // En una web real, aquí iniciamos el loop de la cámara
+        }
+    </script>
+</body>
+</html>
