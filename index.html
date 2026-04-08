@@ -11,58 +11,47 @@
             --tas-rojo: #e32b21;
             --tas-negro-header: #1a1a1a;
             --tas-gris-fondo: #f4f4f4;
-            --tas-blanco: #ffffff;
         }
 
         body { 
-            font-family: 'Segoe UI', Arial, sans-serif; 
+            font-family: 'Segoe UI', sans-serif; 
             margin: 0; 
             background-color: var(--tas-gris-fondo); 
             display: flex; 
             flex-direction: column;
-            min-height: 100vh;
+            align-items: center;
         }
 
-        /* FRANJA SUPERIOR */
         .header-tas {
             background-color: var(--tas-negro-header);
             padding: 15px 0;
             text-align: center;
             width: 100%;
-            z-index: 10;
         }
 
         .logo-header {
             max-width: 140px;
             height: auto;
+            display: block;
+            margin: 0 auto;
         }
 
-        /* CONTENEDOR SUBIDO CASI PEGADO A LA FRANJA */
-        .main-container {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            padding: 0 20px;
-        }
-        
         .card { 
             max-width: 400px; 
-            width: 100%; 
-            background: var(--tas-blanco); 
-            padding: 30px; 
-            border-radius: 8px; 
+            width: 90%; 
+            background: #fff; 
+            padding: 25px; 
+            border-radius: 0 0 8px 8px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
             border-top: 5px solid var(--tas-rojo);
             text-align: center;
-            margin-top: 10px; /* Pegado a la franja gris */
-            height: fit-content;
+            margin-top: 0; 
         }
         
         h2 { 
             text-transform: uppercase; 
             font-size: 1.1em; 
-            letter-spacing: 0.5px;
-            margin: 0 0 20px 0;
+            margin: 10px 0 20px 0;
             color: #222;
         }
         
@@ -79,12 +68,13 @@
             font-weight: bold; 
             cursor: pointer; 
             font-size: 13px; 
-            transition: 0.2s;
             text-transform: uppercase;
+            color: white;
+            text-decoration: none;
         }
         
-        .btn-camera { background-color: var(--tas-rojo); color: white; }
-        .btn-file { background-color: #222; color: white; }
+        .btn-camera { background-color: var(--tas-rojo); }
+        .btn-file { background-color: #222; }
 
         #video-container { 
             display: none; 
@@ -94,26 +84,18 @@
             overflow: hidden;
             line-height: 0;
         }
-        
         #video { width: 100%; }
-        
+
         #resultado-box { 
             margin-top: 20px; 
             padding: 15px; 
-            background: #fff; 
             border: 1px dashed #ccc; 
             display: none; 
             border-radius: 8px;
         }
 
-        /* BOTÓN WALLET ESTILIZADO (SVG OFICIAL) */
-        .wallet-button {
-            display: inline-block;
-            height: 48px;
-            transition: transform 0.2s ease;
-        }
-        .wallet-button:hover { transform: scale(1.02); }
-        .wallet-button img { height: 100%; width: auto; }
+        .wallet-link { display: inline-block; margin-top: 10px; }
+        .wallet-img { height: 55px; width: auto; display: block; }
 
         canvas { display: none; }
     </style>
@@ -121,29 +103,29 @@
 <body>
 
     <div class="header-tas">
-        <img src="https://static.wixstatic.com/media/76b701_63365928d25f46488730953683f2d257~mv2.png/v1/fill/w_182,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/LOGO%20TAS%20FONDO%20NEGRO.png" alt="TAS Seguridad" class="logo-header">
+        <img src="logo_tas.png" 
+             onerror="this.src='https://static.wixstatic.com/media/76b701_63365928d25f46488730953683f2d257~mv2.png/v1/fill/w_182,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/LOGO%20TAS%20FONDO%20NEGRO.png'" 
+             alt="TAS" class="logo-header">
     </div>
 
-    <div class="main-container">
-        <div class="card">
-            <h2>Agrega tu QR a Google Wallet</h2>
+    <div class="card">
+        <h2>Agrega tu QR a Google Wallet</h2>
 
-            <div class="btn-group">
-                <button class="btn btn-camera" onclick="abrirCamara()">📸 Activar Cámara</button>
-                <label class="btn btn-file">
-                    📂 Cargar Imagen o PDF
-                    <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
-                </label>
-            </div>
+        <div class="btn-group">
+            <button class="btn btn-camera" onclick="abrirCamara()">📸 Activar Cámara</button>
+            <label class="btn btn-file">
+                📂 Cargar Imagen o PDF
+                <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
+            </label>
+        </div>
 
-            <div id="video-container">
-                <video id="video"></video>
-            </div>
+        <div id="video-container">
+            <video id="video"></video>
+        </div>
 
-            <div id="resultado-box">
-                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">QR detectado con éxito</p>
-                <div id="boton-wallet-container"></div>
-            </div>
+        <div id="resultado-box">
+            <p style="color: #666; font-size: 13px; margin-bottom: 10px;">¡QR Detectado!</p>
+            <div id="boton-wallet-container"></div>
         </div>
     </div>
 
@@ -157,9 +139,6 @@
     const botonContainer = document.getElementById('boton-wallet-container');
     const video = document.getElementById('video');
     const videoContainer = document.getElementById('video-container');
-
-    // SVG Oficial de Google Wallet (Vectorizado para que no se pixele)
-    const googleWalletBadge = `https://upload.wikimedia.org/wikipedia/commons/b/b2/Add_to_Google_Wallet_badge.svg`;
 
     fileInput.onchange = async (e) => {
         const file = e.target.files[0];
@@ -205,7 +184,9 @@
             video.play();
             videoContainer.style.display = 'block';
             requestAnimationFrame(tickCamara);
-        } catch (err) { alert("Error de cámara. Asegúrate de usar HTTPS."); }
+        } catch (err) {
+            alert("Error de cámara. Usa HTTPS.");
+        }
     }
 
     function tickCamara() {
@@ -233,7 +214,7 @@
         
         if (code) {
             resultadoBox.style.display = 'block';
-            botonContainer.innerHTML = `<span style="font-size: 12px; color: #999;">Generando enlace...</span>`;
+            botonContainer.innerHTML = "Generando enlace...";
             
             fetch('https://park-wallet.ingealexeg.workers.dev/', {
                 method: 'POST',
@@ -242,20 +223,23 @@
             })
             .then(res => res.json())
             .then(data => {
+                // AQUÍ USAMOS EL NOMBRE CORRECTO: google-wallet.png
                 botonContainer.innerHTML = `
-                    <a href="${data.url}" target="_blank" class="wallet-button">
-                        <img src="${googleWalletBadge}" alt="Add to Google Wallet">
+                    <a href="${data.url}" target="_blank" class="wallet-link">
+                        <img src="google-wallet.png" 
+                             class="wallet-img" 
+                             alt="Add to Google Wallet"
+                             onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/b/b2/Add_to_Google_Wallet_badge.svg'">
                     </a>`;
             })
-            .catch(() => { 
-                botonContainer.innerHTML = `<span style="color:red">Error al generar pase</span>`;
-            });
+            .catch(() => { botonContainer.innerHTML = "Error al conectar"; });
         }
     }
 
     function limpiarEstado() {
         resultadoBox.style.display = 'none';
         botonContainer.innerHTML = '';
+        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
         videoContainer.style.display = 'none';
     }
 </script>
