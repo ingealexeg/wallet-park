@@ -29,15 +29,16 @@
             padding: 15px 0;
             text-align: center;
             width: 100%;
-            z-index: 10;
         }
 
         .logo-header {
-            max-width: 140px;
+            max-width: 160px; /* Ajustado para mejor visibilidad */
             height: auto;
+            display: block;
+            margin: 0 auto;
         }
 
-        /* CONTENEDOR SUBIDO CASI PEGADO A LA FRANJA */
+        /* CONTENEDOR SUBIDO */
         .main-container {
             flex: 1;
             display: flex;
@@ -49,12 +50,12 @@
             max-width: 400px; 
             width: 100%; 
             background: var(--tas-blanco); 
-            padding: 30px; 
-            border-radius: 8px; 
+            padding: 25px 30px; 
+            border-radius: 4px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
             border-top: 5px solid var(--tas-rojo);
             text-align: center;
-            margin-top: 10px; /* Pegado a la franja gris */
+            margin-top: 5px; /* Casi pegado a la franja gris */
             height: fit-content;
         }
         
@@ -90,7 +91,7 @@
             display: none; 
             margin-top: 15px; 
             border: 2px solid var(--tas-rojo);
-            border-radius: 8px;
+            border-radius: 4px;
             overflow: hidden;
             line-height: 0;
         }
@@ -103,17 +104,16 @@
             background: #fff; 
             border: 1px dashed #ccc; 
             display: none; 
-            border-radius: 8px;
         }
 
-        /* BOTÓN WALLET ESTILIZADO (SVG OFICIAL) */
+        /* BOTÓN WALLET OFICIAL (Sin distorsión) */
         .wallet-button {
             display: inline-block;
-            height: 48px;
+            margin-top: 10px;
             transition: transform 0.2s ease;
         }
-        .wallet-button:hover { transform: scale(1.02); }
-        .wallet-button img { height: 100%; width: auto; }
+        .wallet-button:hover { transform: scale(1.03); }
+        .wallet-button img { height: 45px; width: auto; }
 
         canvas { display: none; }
     </style>
@@ -121,7 +121,7 @@
 <body>
 
     <div class="header-tas">
-        <img src="https://static.wixstatic.com/media/76b701_63365928d25f46488730953683f2d257~mv2.png/v1/fill/w_182,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/LOGO%20TAS%20FONDO%20NEGRO.png" alt="TAS Seguridad" class="logo-header">
+        <img src="logo_tas.png" alt="TAS Seguridad" class="logo-header">
     </div>
 
     <div class="main-container">
@@ -141,7 +141,7 @@
             </div>
 
             <div id="resultado-box">
-                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">QR detectado con éxito</p>
+                <p style="color: #666; font-size: 13px; margin: 0 0 10px 0;">QR Detectado</p>
                 <div id="boton-wallet-container"></div>
             </div>
         </div>
@@ -158,8 +158,8 @@
     const video = document.getElementById('video');
     const videoContainer = document.getElementById('video-container');
 
-    // SVG Oficial de Google Wallet (Vectorizado para que no se pixele)
-    const googleWalletBadge = `https://upload.wikimedia.org/wikipedia/commons/b/b2/Add_to_Google_Wallet_badge.svg`;
+    // Badge oficial de Google para evitar que se vea mal
+    const googleWalletBadge = "https://upload.wikimedia.org/wikipedia/commons/b/b2/Add_to_Google_Wallet_badge.svg";
 
     fileInput.onchange = async (e) => {
         const file = e.target.files[0];
@@ -205,7 +205,7 @@
             video.play();
             videoContainer.style.display = 'block';
             requestAnimationFrame(tickCamara);
-        } catch (err) { alert("Error de cámara. Asegúrate de usar HTTPS."); }
+        } catch (err) { alert("Error de cámara. Usa HTTPS."); }
     }
 
     function tickCamara() {
@@ -233,7 +233,7 @@
         
         if (code) {
             resultadoBox.style.display = 'block';
-            botonContainer.innerHTML = `<span style="font-size: 12px; color: #999;">Generando enlace...</span>`;
+            botonContainer.innerHTML = `<span style="font-size: 12px; color: #999;">Generando pase...</span>`;
             
             fetch('https://park-wallet.ingealexeg.workers.dev/', {
                 method: 'POST',
@@ -248,7 +248,7 @@
                     </a>`;
             })
             .catch(() => { 
-                botonContainer.innerHTML = `<span style="color:red">Error al generar pase</span>`;
+                botonContainer.innerHTML = `<span style="color:red; font-size:12px;">Error al conectar</span>`;
             });
         }
     }
