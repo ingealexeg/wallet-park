@@ -11,15 +11,16 @@
             --tas-rojo: #e32b21;
             --tas-negro-header: #1a1a1a;
             --tas-gris-fondo: #f4f4f4;
+            --tas-blanco: #ffffff;
         }
 
         body { 
-            font-family: 'Segoe UI', sans-serif; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
             margin: 0; 
             background-color: var(--tas-gris-fondo); 
             display: flex; 
             flex-direction: column;
-            align-items: center;
+            min-height: 100vh;
         }
 
         .header-tas {
@@ -30,28 +31,37 @@
         }
 
         .logo-header {
-            max-width: 140px;
+            max-width: 180px;
             height: auto;
             display: block;
             margin: 0 auto;
         }
 
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 0 20px;
+        }
+        
         .card { 
             max-width: 400px; 
-            width: 90%; 
-            background: #fff; 
-            padding: 25px; 
-            border-radius: 0 0 8px 8px; 
+            width: 100%; 
+            background: var(--tas-blanco); 
+            padding: 25px 30px; 
+            border-radius: 4px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
             border-top: 5px solid var(--tas-rojo);
             text-align: center;
-            margin-top: 0; 
+            margin-top: 10px;
+            height: fit-content;
         }
         
         h2 { 
             text-transform: uppercase; 
             font-size: 1.1em; 
-            margin: 10px 0 20px 0;
+            letter-spacing: 0.5px;
+            margin: 0 0 20px 0;
             color: #222;
         }
         
@@ -68,34 +78,40 @@
             font-weight: bold; 
             cursor: pointer; 
             font-size: 13px; 
+            transition: 0.2s;
             text-transform: uppercase;
-            color: white;
-            text-decoration: none;
         }
         
-        .btn-camera { background-color: var(--tas-rojo); }
-        .btn-file { background-color: #222; }
+        .btn-camera { background-color: var(--tas-rojo); color: white; }
+        .btn-file { background-color: #222; color: white; }
 
         #video-container { 
             display: none; 
             margin-top: 15px; 
             border: 2px solid var(--tas-rojo);
-            border-radius: 8px;
+            border-radius: 4px;
             overflow: hidden;
             line-height: 0;
         }
+        
         #video { width: 100%; }
-
+        
         #resultado-box { 
             margin-top: 20px; 
             padding: 15px; 
+            background: #fff; 
             border: 1px dashed #ccc; 
             display: none; 
-            border-radius: 8px;
         }
 
-        .wallet-link { display: inline-block; margin-top: 10px; }
-        .wallet-img { height: 55px; width: auto; display: block; }
+        /* BOTÓN WALLET LOCAL */
+        .wallet-button {
+            display: inline-block;
+            margin-top: 10px;
+            transition: transform 0.2s ease;
+        }
+        .wallet-button:hover { transform: scale(1.03); }
+        .wallet-button img { height: 48px; width: auto; }
 
         canvas { display: none; }
     </style>
@@ -103,29 +119,30 @@
 <body>
 
     <div class="header-tas">
-        <img src="logo_tas.png" 
-             onerror="this.src='https://static.wixstatic.com/media/76b701_63365928d25f46488730953683f2d257~mv2.png/v1/fill/w_182,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/LOGO%20TAS%20FONDO%20NEGRO.png'" 
-             alt="TAS" class="logo-header">
+        <img src="logo_tas.png" alt="TAS Seguridad" class="logo-header">
     </div>
 
-    <div class="card">
-        <h2>Agrega tu QR a Google Wallet</h2>
+    <div class="main-container">
+        <div class="card">
+            <h2>HUB JÚPITER</h2>
+            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Escanea tu código de acceso para guardarlo en tu Google Wallet.</p>
 
-        <div class="btn-group">
-            <button class="btn btn-camera" onclick="abrirCamara()">📸 Activar Cámara</button>
-            <label class="btn btn-file">
-                📂 Cargar Imagen o PDF
-                <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
-            </label>
-        </div>
+            <div class="btn-group">
+                <button class="btn btn-camera" onclick="abrirCamara()">📸 ACTIVAR CÁMARA</button>
+                <label class="btn btn-file">
+                    📂 CARGAR IMAGEN O PDF
+                    <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
+                </label>
+            </div>
 
-        <div id="video-container">
-            <video id="video"></video>
-        </div>
+            <div id="video-container">
+                <video id="video"></video>
+            </div>
 
-        <div id="resultado-box">
-            <p style="color: #666; font-size: 13px; margin-bottom: 10px;">¡QR Detectado!</p>
-            <div id="boton-wallet-container"></div>
+            <div id="resultado-box">
+                <p style="color: var(--tas-rojo); font-weight: bold; font-size: 14px; margin: 0 0 10px 0;">CÓDIGO DETECTADO</p>
+                <div id="boton-wallet-container"></div>
+            </div>
         </div>
     </div>
 
@@ -152,10 +169,13 @@
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
         const page = await pdf.getPage(1);
-        const viewport = page.getViewport({scale: 2});
+        
+        // Mejoramos la resolución (scale: 3) para detectar QRs grandes o densos
+        const viewport = page.getViewport({scale: 3});
         const canvas = document.getElementById('hidden-canvas');
         const context = canvas.getContext('2d');
         canvas.height = viewport.height; canvas.width = viewport.width;
+        
         await page.render({canvasContext: context, viewport: viewport}).promise;
         detectarQR(canvas);
     }
@@ -166,8 +186,12 @@
             const img = new Image();
             img.onload = () => {
                 const canvas = document.getElementById('hidden-canvas');
-                canvas.width = img.width; canvas.height = img.height;
-                canvas.getContext('2d').drawImage(img, 0, 0);
+                // Si la imagen es muy pequeña, la forzamos a una escala mayor para facilitar la detección
+                const factor = img.width < 1000 ? 2 : 1;
+                canvas.width = img.width * factor;
+                canvas.height = img.height * factor;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 detectarQR(canvas);
             };
             img.src = e.target.result;
@@ -184,9 +208,7 @@
             video.play();
             videoContainer.style.display = 'block';
             requestAnimationFrame(tickCamara);
-        } catch (err) {
-            alert("Error de cámara. Usa HTTPS.");
-        }
+        } catch (err) { alert("Error de cámara. Verifica permisos HTTPS."); }
     }
 
     function tickCamara() {
@@ -210,11 +232,13 @@
     function detectarQR(canvas) {
         const ctx = canvas.getContext('2d');
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+        });
         
         if (code) {
             resultadoBox.style.display = 'block';
-            botonContainer.innerHTML = "Generando enlace...";
+            botonContainer.innerHTML = `<span style="font-size: 12px; color: #999;">Generando enlace...</span>`;
             
             fetch('https://park-wallet.ingealexeg.workers.dev/', {
                 method: 'POST',
@@ -223,23 +247,23 @@
             })
             .then(res => res.json())
             .then(data => {
-                // AQUÍ USAMOS EL NOMBRE CORRECTO: google-wallet.png
+                // Usamos google-wallet.png tal como está en tu repositorio
                 botonContainer.innerHTML = `
-                    <a href="${data.url}" target="_blank" class="wallet-link">
-                        <img src="google-wallet.png" 
-                             class="wallet-img" 
-                             alt="Add to Google Wallet"
-                             onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/b/b2/Add_to_Google_Wallet_badge.svg'">
+                    <a href="${data.url}" target="_blank" class="wallet-button">
+                        <img src="google-wallet.png" alt="Add to Google Wallet">
                     </a>`;
             })
-            .catch(() => { botonContainer.innerHTML = "Error al conectar"; });
+            .catch(() => { 
+                botonContainer.innerHTML = `<span style="color:red; font-size:12px;">Error de red</span>`;
+            });
+        } else {
+            alert("No se detectó ningún código QR. Intenta con una imagen más clara.");
         }
     }
 
     function limpiarEstado() {
         resultadoBox.style.display = 'none';
         botonContainer.innerHTML = '';
-        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
         videoContainer.style.display = 'none';
     }
 </script>
